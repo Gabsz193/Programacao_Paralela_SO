@@ -1,0 +1,13 @@
+.git
+.gitignore
+.dockerignore
+bin/
+obj/
+out/
+.idea/
+.vscode/
+__pycache__/
+.venv/
+venv/
+*.png
+*.csv
