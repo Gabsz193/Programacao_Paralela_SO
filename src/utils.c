@@ -7,17 +7,19 @@
 int* generate_vector(size_t n, int min, int max) {
     int* v = (int*)malloc(n * sizeof(int));
     if (!v) {
-        perror("Failed to allocate vector");
+        perror("Falha ao alocar vetor");
         return NULL;
     }
     
-    // Use a fixed seed for reproducibility if needed, or time(NULL) for randomness
-    // For this assignment, random is fine, but for debugging fixed seed is better.
-    // We'll use time(NULL) in main or here. Let's stick to rand() here assuming srand called in main.
-    
+    /**
+     * Deixaremos a responsabilidade de executar `srand` ao usuário
+     * da função para permitir a reprodutibilidade dos experimentos.
+     */
+
     for (size_t i = 0; i < n; i++) {
         v[i] = min + rand() % (max - min + 1);
     }
+
     return v;
 }
 

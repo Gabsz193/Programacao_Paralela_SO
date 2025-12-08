@@ -4,6 +4,7 @@ obj/
 *.o
 
 # Generated outputs
+build/
 out/
 *.png
 *.csv
@@ -15,6 +16,7 @@ __pycache__/
 venv/
 
 # IDEs
+.cache
 .idea/
 .vscode/
 *.swp
