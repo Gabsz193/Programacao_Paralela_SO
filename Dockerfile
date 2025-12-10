@@ -1,15 +1,14 @@
-FROM gcc:latest
+FROM alpine:latest
 
 WORKDIR /app
 
 # Install python3 for benchmarking script
-RUN apt-get update && apt-get install -y python3 python3-pip python3-venv cmake \
-    pkg-config cmake ninja-build gnome-desktop-testing libasound2-dev libpulse-dev \
-    libaudio-dev libfribidi-dev libjack-dev libsndio-dev libx11-dev libxext-dev \
-    libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev \
-    libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
-    libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev \
-    libpipewire-0.3-dev libwayland-dev libdecor-0-dev liburing-dev
+RUN apk add --no-cache python3 py3-pip python3-venv \
+    build-base cmake ibus libdecor libthai fribidi \
+    libgl libx11 libxcursor libxext libxfixes libxi \
+    libxinerama libxkbcommon libxrandr libxrender libxss libxtst \
+    mesa ninja vulkan-loader wayland
+
 
 RUN python3 -m venv .venv
 RUN .venv/bin/pip install matplotlib
@@ -18,7 +17,7 @@ RUN .venv/bin/pip install matplotlib
 COPY . .
 
 # Compile the C program
-RUN cmake -S . -B out -G "Unix Makefiles"
+RUN cmake -S . -B out -G "Unix Makefiles" -DCMAKE_C_COMPILER=musl-gcc -DCMAKE_C_FLAGS=-static
 RUN make -C out
 
 # Default command (can be overridden)
