@@ -30,9 +30,10 @@ add_executable(simulation
     src/simulation.c
 )
 
-link_libraries(scalar_product PRIVATE Threads::Threads)
-link_libraries(matrix_product PRIVATE Threads::Threads)
-link_libraries(simulation PRIVATE Threads::Threads)
+# Linkar bibliotecas relevantes a cada parte
+target_link_libraries(scalar_product PRIVATE Threads::Threads)
+target_link_libraries(matrix_product PRIVATE Threads::Threads)
+target_link_libraries(simulation PRIVATE Threads::Threads SDL3::SDL3)
 
-# Linkar parte 3 com o SDL
-target_link_libraries(simulation PRIVATE SDL3::SDL3)
+# Configura a instalação dos 3 programas gerados
+install(TARGETS scalar_product matrix_product simulation)
