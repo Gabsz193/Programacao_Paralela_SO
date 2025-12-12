@@ -18,11 +18,11 @@ void imprimir_uso(const char* prog_name) {
 }
 
 Args validar_argumentos(int argc, char* argv[]) {
-    unsigned int seed = time(NULL);
     Args args = {
         .size = 0,
         .threads = 1,
         .mode = SEQ,
+        .seed = time(NULL),
     };
     
     // Analisar argumentos da linha de comando 
@@ -46,7 +46,7 @@ Args validar_argumentos(int argc, char* argv[]) {
                 exit(EXIT_FAILURE);
             }
         } else if (strcmp(argv[i], "--seed") == 0 && i + 1 < argc) {
-            seed = atoi(argv[i+1]);
+            args.seed = atoi(argv[i+1]);
             i++;
         } else {
             imprimir_uso(argv[0]);
@@ -70,6 +70,6 @@ Args validar_argumentos(int argc, char* argv[]) {
     fprintf(stderr, VERDE("DEBUG") "\tThreads: %d\n", args.threads);
 #endif
 
-    srand(seed);
+    srand(args.seed);
     return args;
 }

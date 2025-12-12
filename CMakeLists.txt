@@ -28,6 +28,7 @@ add_executable(matrix_product
 # Adicionar executável da parte 3
 add_executable(simulation
     src/simulation.c
+    src/utils.c
 )
 
 # Linkar bibliotecas relevantes a cada parte

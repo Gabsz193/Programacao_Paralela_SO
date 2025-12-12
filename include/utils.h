@@ -16,6 +16,9 @@ typedef struct {
 
     //< O modo de execução (sequencial ou paralelo)
     enum { SEQ, PAR } mode;
+
+    //< A seed aleatória passada por argumento.
+    unsigned int seed;
 } Args;
 
 /**

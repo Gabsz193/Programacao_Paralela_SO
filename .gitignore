@@ -2,6 +2,7 @@
 bin/
 obj/
 *.o
+flake.*
 
 # Generated outputs
 build/
