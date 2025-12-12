@@ -15,10 +15,13 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
-//< Constantes de dimensão da tela
+//< Constantes de execução do programa
 enum {
-    WINDOW_WIDTH = 640,
-    WINDOW_HEIGHT = 480,
+    WINDOW_WIDTH = 240,
+    WINDOW_HEIGHT = 120,
+    RAIO_MIN = 5,
+    RAIO_MAX = 30,
+    VEL_MAX = 5,
 };
 
 typedef struct {
@@ -69,16 +72,16 @@ int inicializar_circulos(Args *args) {
         // Gerar cor opaca aleatória
         c->c = SDL_rand_bits() | 0xFF;
 
-        // Gerar raio aleatório entre [20, 100)
-        c->r = 20 + SDL_randf() * 80;
+        // Gerar raio aleatório entre [RAIO_MIN, RAIO_MAX)
+        c->r = RAIO_MIN + SDL_randf() * (RAIO_MAX - RAIO_MIN);
         
         // Gerar posição aleatória dentro da tela
         c->x = c->r + (SDL_randf() * (WINDOW_WIDTH  - (2 * c->r)));
         c->y = c->r + (SDL_randf() * (WINDOW_HEIGHT - (2 * c->r)));
 
-        // Gerar velocidade entre [-5, 5)
-        c->vx = (SDL_randf() - 0.5f) * 10;
-        c->vy = (SDL_randf() - 0.5f) * 10;
+        // Gerar velocidade entre [-VEL_MAX, VEL_MAX)
+        c->vx = (SDL_randf() - 0.5f) * 2 * VEL_MAX;
+        c->vy = (SDL_randf() - 0.5f) * 2 * VEL_MAX;
     }
 
     return 1;
@@ -239,13 +242,13 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     }
 
     // Criar renderizador da tela
-    if (!SDL_CreateWindowAndRenderer("Simulador", 640, 480, 0, &window, &renderer)) {
+    if (!SDL_CreateWindowAndRenderer("Simulador", WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer)) {
         SDL_Log("Não foi possível criar janela/renderizador: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
-    SDL_SetRenderLogicalPresentation(renderer, 640, 480, SDL_LOGICAL_PRESENTATION_LETTERBOX);
-    canvas = SDL_CreateSurface(640, 480, SDL_PIXELFORMAT_RGBA8888);
+    SDL_SetRenderLogicalPresentation(renderer, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+    canvas = SDL_CreateSurface(WINDOW_WIDTH, WINDOW_HEIGHT, SDL_PIXELFORMAT_RGBA8888);
 
     return SDL_APP_CONTINUE;
 }
