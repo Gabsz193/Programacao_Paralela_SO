@@ -15,21 +15,19 @@ typedef struct {
 //< Cria uma matriz com uma dimensão dada.
 matriz_t *criar_matriz(size_t linhas, size_t colunas);
 
-/**
- * @brief Calcula sequencialmente o produto entre duas matrizes.
- * @param a A matriz à esquerda no produto.
- * @param b A matriz à direita no produto.
- * @returns A matriz resultante do produto `a * b`.
- */
+//< Gera uma matriz com uma dimensão dada e valores aleatórios.
+matriz_t *gerar_matriz(size_t linhas, size_t colunas, int min, int max);
+
+//< Imprime uma matriz no `stderr` com um rótulo dado.
+void imprimir_matriz(const matriz_t *matriz, const char *nome);
+
+//< Libera a memória associada à uma matriz.
+void free_matriz(matriz_t* matriz);
+
+//< Calcula sequencialmente o produto `a * b` entre duas matrizes.
 matriz_t *produto_matrizes_seq(const matriz_t* a, const matriz_t* b);
 
-/**
- * @brief Calcula paralelamente o produto escalar entre dois vetores.
- * @param a A matriz à esquerda no produto.
- * @param b A matriz à direita no produto.
- * @param num_threads O número de threads usadas para executar o produto entre matrizes.
- * @returns A matriz resultante do produto `a * b`.
- */
+//< Calcula paralelamente o produto `a * b` entre duas matrizes, dado o número de threads.
 matriz_t *produto_matrizes_par(const matriz_t* a, const matriz_t* b, int num_threads);
 
 #endif // MATRIX_PRODUCT_H

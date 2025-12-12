@@ -13,8 +13,39 @@ matriz_t *criar_matriz(size_t linhas, size_t colunas) {
     return matriz;
 };
 
+//< Gera uma matriz com uma dimensão dada e valores aleatórios.
+matriz_t *gerar_matriz(size_t linhas, size_t colunas, int min, int max) {
+    matriz_t *matriz = criar_matriz(linhas, colunas);
+
+    // Gerar valores aleatórios
+    for (size_t i = 0; i < linhas; i++) {
+        for (size_t j = 0; j < colunas; j++) {
+            MAT_POS(matriz, i, j) = min + rand() % (max - min + 1);
+        }
+    }
+    
+    return matriz;
+};
+
+//< Imprime uma matriz no `stderr` com um rótulo dado.
+void imprimir_matriz(const matriz_t *m, const char *nome) {
+    fprintf(stderr, CIANO("INFO") "\tMatriz '%s' (%lux%lu):\n", nome, m->linhas, m->colunas);
+    for (size_t i = 0; i < m->linhas; i++) {
+        fprintf(stderr, CIANO("INFO") "\t| ");
+        for (size_t j = 0; j < m->colunas; j++) {
+            // Pular colunas caso hajam muitas
+            if (j == 15) {
+                fprintf(stderr, " ... ");
+                j = m->colunas - 5;
+            }
+            fprintf(stderr, "%5d", MAT_POS(m, i, j));
+        }
+        fprintf(stderr, " |\n");
+    }
+};
+
 //< Libera a memória associada à uma matriz.
-void matriz_free(matriz_t* matriz) {
+void free_matriz(matriz_t* matriz) {
     free(matriz->dados);
     free(matriz);
 }
@@ -31,10 +62,10 @@ typedef struct {
     
     //< O índice da linha de `destino` em que a função deve iniciar
     // o cálculo.
-    size_t linha_inicial;
+    size_t inicio;
 
     //< A quantidade de linhas para produzir em `destino`.
-    size_t qtd_linhas;
+    size_t fim;
 } ProdMatrizesInfo;
 
 //< Verifica se é possível realizar o produto `a * b`, retornando 1 caso seja.
@@ -42,13 +73,9 @@ static int verificar_produto_matrizes(const matriz_t* a, const matriz_t* b) {
     return a && b && a->dados && b->dados && a->colunas == b->linhas;
 }
 
-/**
- * @brief Executa o produto entre duas matrizes.
- * @param info Contém as informações necessárias para executar o
- * produto entre matrizes.
- */
+//< Executa o produto entre duas matrizes garantidamente multiplicáveis.
 void produto_matrizes(ProdMatrizesInfo* info) {
-    for (size_t i = info->linha_inicial; i < info->qtd_linhas; i++) {
+    for (size_t i = info->inicio; i < info->fim; i++) {
         for (size_t j = 0; j < info->destino->colunas; j++) {
             MAT_POS(info->destino, i, j) = 0;
             for (size_t k = 0; k < info->a->colunas; k++) {
@@ -64,12 +91,7 @@ void* produto_matrizes_thread(void* arg) {
     return NULL;
 }
 
-/**
- * @brief Calcula sequencialmente o produto entre duas matrizes.
- * @param a A matriz à esquerda no produto.
- * @param b A matriz à direita no produto.
- * @returns A matriz resultante do produto `a * b`.
- */
+//< Calcula sequencialmente o produto `a * b` entre duas matrizes.
 matriz_t *produto_matrizes_seq(const matriz_t* a, const matriz_t* b) {
     if (!verificar_produto_matrizes(a, b)) {
         fprintf(stderr, VERMELHO("ERRO") "\tNão é possível multiplicar as matrizes a (%p) e b (%p).", a, b);
@@ -80,21 +102,15 @@ matriz_t *produto_matrizes_seq(const matriz_t* a, const matriz_t* b) {
         .a = a,
         .b = b,
         .destino = criar_matriz(a->linhas, b->colunas),
-        .linha_inicial = 0,
-        .qtd_linhas = a->linhas,
+        .inicio = 0,
+        .fim = a->linhas,
     };
 
     produto_matrizes(&info);
     return info.destino;
 };
 
-/**
- * @brief Calcula paralelamente o produto escalar entre dois vetores.
- * @param a A matriz à esquerda no produto.
- * @param b A matriz à direita no produto.
- * @param num_threads O número de threads usadas para executar o produto entre matrizes.
- * @returns A matriz resultante do produto `a * b`.
- */
+//< Calcula paralelamente o produto `a * b` entre duas matrizes, dado o número de threads.
 matriz_t *produto_matrizes_par(const matriz_t* a, const matriz_t* b, int num_threads) {
     if (num_threads <= 0) return 0;
 
@@ -118,10 +134,10 @@ matriz_t *produto_matrizes_par(const matriz_t* a, const matriz_t* b, int num_thr
         data->a = a;
         data->b = b;
         data->destino = destino;
-        data->linha_inicial = inicio_segmento;
-        data->qtd_linhas = linhas_por_thread + ((size_t)i < resto);
+        data->inicio = inicio_segmento;
+        data->fim = data->inicio + linhas_por_thread + ((size_t)i < resto);
         
-        inicio_segmento += data->qtd_linhas;
+        inicio_segmento += data->fim - data->inicio;
         
         if (pthread_create(&threads[i], NULL, produto_matrizes_thread, data) != 0) {
             perror("Falha ao criar thread");
@@ -130,7 +146,7 @@ matriz_t *produto_matrizes_par(const matriz_t* a, const matriz_t* b, int num_thr
             for (int j = 0; j < i; j++)
                 pthread_cancel(threads[j]);
 
-            matriz_free(destino);
+            free_matriz(destino);
             free(threads);
             free(thread_data);
             return NULL; 

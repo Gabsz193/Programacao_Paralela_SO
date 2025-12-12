@@ -3,6 +3,26 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+//< Gera um vetor de tamanho `n` com números aleatórios entre `min` e `max`.
+int* gerar_vetor(size_t n, int min, int max) {
+    int* v = (int*)malloc(n * sizeof(int));
+    if (!v) {
+        perror("Falha ao alocar vetor");
+        return NULL;
+    }
+    
+    /**
+     * Deixaremos a responsabilidade de executar `srand` ao usuário
+     * da função para permitir a reprodutibilidade dos experimentos.
+     */
+
+    for (size_t i = 0; i < n; i++) {
+        v[i] = min + rand() % (max - min + 1);
+    }
+
+    return v;
+}
+
 typedef struct {
     //< O primeiro vetor do produto escalar.
     const int* v1;
@@ -19,11 +39,7 @@ typedef struct {
     long long resultado;
 } ProdEscalarInfo;
 
-/**
- * @brief Executa o produto escalar entre dois vetores.
- * @param info Contém as informações necessárias para executar o
- * produto escalar.
- */
+//< Executa o produto escalar entre dois vetores quaisquer.
 void produto_escalar(ProdEscalarInfo* info) {
     info->resultado = 0;
     for (size_t i = 0; i < info->tamanho; i++) {
@@ -37,13 +53,7 @@ void* produto_escalar_thread(void* arg) {
     return NULL;
 }
 
-/**
- * @brief Calcula sequencialmente o produto escalar entre dois vetores.
- * @param v1 O primeiro vetor do produto escalar.
- * @param v2 O segundo vetor do produto escalar.
- * @param n O tamanho dos vetores `v1` e `v2`.
- * @returns O resultado do produto escalar.
- */
+//< Calcula sequencialmente o produto escalar `v1 * v2` entre dois vetores.
 long long produto_escalar_seq(const int* v1, const int* v2, size_t n) {
     ProdEscalarInfo info = {
         .v1 = v1,
@@ -56,14 +66,7 @@ long long produto_escalar_seq(const int* v1, const int* v2, size_t n) {
     return info.resultado;
 }
 
-/**
- * @brief Calcula paralelamente o produto escalar entre dois vetores.
- * @param v1 O primeiro vetor do produto escalar.
- * @param v2 O segundo vetor do produto escalar.
- * @param n O tamanho dos vetores `v1` e `v2`.
- * @param num_threads O número de threads usadas para executar o produto escalar.
- * @returns O resultado do produto escalar.
- */
+//< Calcula paralelamente o produto escalar `v1 * v2` entre dois vetores, dado um número de threads.
 long long produto_escalar_par(const int* v1, const int* v2, size_t n, int num_threads) {
     if (num_threads <= 0) return 0;
     

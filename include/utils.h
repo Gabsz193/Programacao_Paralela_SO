@@ -3,13 +3,33 @@
 
 #include <stddef.h>
 
-// Generates a vector of size n with random integers between min and max
-int* generate_vector(size_t n, int min, int max);
+/**
+ * @brief Representa os argumentos passados para os programas que calculam
+ * produto interno de vetores e produto de matrizes.
+ */
+typedef struct {
+    //< O tamanho dos vetores/matrizes quadradas.
+    size_t size;
 
-// Prints the first k elements of the vector (for debugging)
-void print_vector(const int* v, size_t n, size_t k);
+    //< A quantidade de threads a serem usadas.
+    int threads;
 
-// Returns the current wall-clock time in seconds
-double current_time_seconds();
+    //< O modo de execução (sequencial ou paralelo)
+    enum { SEQ, PAR } mode;
+} Args;
+
+/**
+ * @brief Valida e obtem os argumentos passados por linha de comando.
+ * @param argc A contagem de argumentos passados.
+ * @param argv Um vetor de strings contendo os argumentos separados por
+ * espaços em branco.
+ * @returns Uma lista de argumentos lidos do `argv`. Caso não sejam passados
+ * argumentos o suficiente, ou caso os argumentos sejam inválidos, a função
+ * aborta a execução do programa.
+ */
+Args validar_argumentos(int argc, char* argv[]);
+
+//< Retorna o tempo atual em segundos.
+double tempo_segundos();
 
 #endif // UTILS_H
