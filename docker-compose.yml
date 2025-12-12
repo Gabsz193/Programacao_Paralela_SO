@@ -1,5 +1,7 @@
 services:
   benchmark:
     build: .
+    environment:
+      DISPLAY: "${DISPLAY}"
     volumes:
-      - ./out:/app/out
+      - /tmp/.X11-unix:/tmp/.X11-unix
