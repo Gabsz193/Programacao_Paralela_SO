@@ -1,6 +1,8 @@
+#include "SDL3/SDL_gpu.h"
 #include "SDL3/SDL_init.h"
 #include "SDL3/SDL_pixels.h"
 #include "SDL3/SDL_rect.h"
+#include "SDL3/SDL_render.h"
 #include "SDL3/SDL_stdinc.h"
 #include "SDL3/SDL_surface.h"
 #include "SDL3/SDL_timer.h"
@@ -17,19 +19,17 @@
 
 //< Constantes de execução do programa
 enum {
-    WINDOW_WIDTH = 240,
-    WINDOW_HEIGHT = 120,
-    RAIO_MIN = 5,
+    WINDOW_WIDTH = 640,
+    WINDOW_HEIGHT = 480,
+    RAIO_MIN = 10,
     RAIO_MAX = 30,
     VEL_MAX = 5,
 };
 
 typedef struct {
-    float x;
-    float y;
-    float r;
-    float vx;
-    float vy;
+    double r;
+    double x, y;
+    double vx, vy;
     Uint32 c;
 } Circulo;
 
@@ -43,7 +43,6 @@ typedef struct {
 
 //< Variáveis utilizadas para gerenciar a janela e renderização.
 static SDL_Window *window = NULL;
-static SDL_Renderer *renderer = NULL;
 static SDL_Surface *canvas = NULL;
 
 //< Os círculos gerados pelo programa.
@@ -55,10 +54,10 @@ static Uint64 fpsPerf = 0;
 static int frames = 0;
 
 //< Inicializa os círculos com valores aleatórios.
-int inicializar_circulos(Args *args) {
+int inicializar_circulos(size_t qtd) {
     // Alocar os círculos
-    n_circulos = args->size;
-    circulos = calloc(n_circulos, sizeof(Circulo));
+    n_circulos = qtd;
+    circulos = malloc(n_circulos * sizeof(Circulo));
 
     if (!circulos) {
         SDL_Log("Não foi possível alocar os círculos.");
@@ -92,44 +91,107 @@ int circulos_colidem(const Circulo *a, const Circulo *b) {
     float dcx = a->x - b->x;
     float dcy = a->y - b->y;
     float dr = a->r + b->r;
-    return (dcx * dcx) + (dcy * dcy) <= (dr * dr);
+    return ((dcx * dcx) + (dcy * dcy) < (dr * dr));
+}
+
+//< Retorna `1` se for possível realizar o movimento de `c` para `(xd, yd)`
+int tentar_movimento(Circulo *a, double dx, double dy) {
+    double ox = a->x;
+    double oy = a->y;
+    a->x = dx;
+    a->y = dy;
+
+    bool colidiu = true;
+    size_t iter = 0;
+    while (colidiu && iter++ < 4) {
+        colidiu = false;
+        for (int i = 0; i < n_circulos; i++) {
+            Circulo *b = circulos + i;
+            
+            if (a == b) continue;
+
+            if (circulos_colidem(a, b)) {
+                colidiu = true;
+
+                /*
+                    Se A se mover para D(dx, dy), os círculos A e B colidem.
+                    Para evitar essa colisão, calcula-se o parâmetro `p1`, usado para
+                    calcular uma nova posição D', dado que...
+                        D' = A + p (D - A)
+                    tal que...
+                        || D' - B || = rA + rB
+                */
+                double ux = dx - ox;
+                double uy = dy - oy;
+                double vx = b->x - ox;
+                double vy = b->y - oy;
+                double t = vx * ux + vy * uy;
+                double R2 = SDL_pow(a->r + b->r, 2);
+                double h2 = (vx * vx + vy * vy) - (t * t);
+                
+                if (h2 > R2) h2 = R2;
+                double p = t - SDL_sqrt(R2 - h2);
+
+                a->x = dx = ox + p * ux;
+                a->y = dy = oy + p * uy;
+
+
+                double ma = SDL_sqrt(a->r);
+                double mb = SDL_sqrt(b->r);
+
+                //< Igual a A - B
+                double xAdB = a->x - b->x, yAdB = a->y - b->y;
+
+                //< Igual a ||A - B||
+                double lAdB = SDL_sqrt((xAdB * xAdB) + (yAdB * yAdB));
+                
+                //< Igual a (A - B) / ||A - B||
+                double xNhat = xAdB / lAdB, yNhat = yAdB / lAdB;
+                
+                //< Igual a Va - Vb
+                double xVadVb = a->vx - b->vx, yVadVb = a->vy - b->vy;
+
+                //< Igual a (Va - Vb) * nhat
+                double Vn = (xVadVb * xNhat) + (yVadVb * yNhat);
+                double j = (- (1.0 + SDL_randf()) * Vn) / ( (1./ma) + (1./mb) );
+                
+                //< Igual a Vn * nhat
+                a->vx -= xNhat * Vn;
+                a->vy -= yNhat * Vn;
+                b->vx += xNhat * Vn;
+                b->vy += yNhat * Vn;
+            }
+        }
+    }
+
+    return 1;
 }
 
 //< Move todos os círculos e previne colisões entre as bordas.
 void mover_circulos() {
     for (int i = 0; i < n_circulos; i++) {
         Circulo *c = circulos + i;
-        c->x += c->vx;
-        c->y += c->vy;
+        int flipx = 0;
+        int flipy = 0;
+        
+        double dx = c->x + c->vx;
+        double dy = c->y + c->vy;
 
-        if (c->x <= c->r) { c->x = c->r; c->vx = -c->vx; }
-        if (c->y <= c->r) { c->y = c->r; c->vy = -c->vy; }
-        if (c->x >= canvas->w - c->r) { c->x = canvas->w - c->r; c->vx = -c->vx; }
-        if (c->y >= canvas->h - c->r) { c->y = canvas->h - c->r; c->vy = -c->vy; }
-    }
-}
+        if (dx <= c->r) { dx = c->r; flipx = 1; }
+        if (dy <= c->r) { dy = c->r; flipy = 1; }
+        if (dx >= canvas->w - c->r) { dx = canvas->w - c->r; flipx = 1; }
+        if (dy >= canvas->h - c->r) { dy = canvas->h - c->r; flipy = 1; }
 
-//< Trata colisões entre os círculos.
-void tratar_colisoes() {
-    for (int i = 0; i < n_circulos; i++) {
-        for (int j = i; j < n_circulos; j++) {
-            Circulo *a = circulos + i;
-            Circulo *b = circulos + j;
+        tentar_movimento(c, dx, dy);
 
-            // Verificar se os círculos colidem
-            if (!circulos_colidem(a, b)) continue;
-
-            // a->vx = 0;
-            // a->vy = 0;
-            // b->vx = 0;
-            // b->vy = 0;
-        }
+        if (flipx) c->vx = -c->vx;
+        if (flipy) c->vy = -c->vy;
     }
 }
 
 //< Renderiza uma seção da tela.
 void renderizar(const SDL_Rect* rect) {
-    SDL_Rect defaultRect = { .x = 0, .y = 0, .w = 640, .h = 480 };
+    SDL_Rect defaultRect = { .x = 0, .y = 0, .w = WINDOW_WIDTH, .h = WINDOW_HEIGHT };
 
     // Usar um rect padrão para a tela toda.
     if (rect == NULL)
@@ -138,7 +200,7 @@ void renderizar(const SDL_Rect* rect) {
     for (int y = rect->y; y < rect->y + rect->h; y++) {
         for (int x = rect->x; x < rect->x + rect->w; x++) {
             // Inicializar cor como branca
-            Uint32 color = SDL_MapSurfaceRGBA(canvas, 255, 255, 255, 255);
+            Uint32 color = 0xFFFFFFFF;
 
             // Desenhar todos os círculos
             for (int i = 0; i < n_circulos; i++) {
@@ -181,28 +243,28 @@ void *render_thread_main(void *_info) {
 }
 
 //< Inicializa todas as threads do programa.
-int inicializar_threads(Args *args) {
-    threads = calloc(args->threads, sizeof(ThreadInfo));
+int inicializar_threads(size_t n_threads) {
+    threads = calloc(n_threads, sizeof(ThreadInfo));
     if (threads == NULL) {
         SDL_Log("Não foi possível alocar memória para os dados das threads.");
         return 0;
     }
     
-    if (pthread_barrier_init(&rendInicio, NULL, args->threads + 1) != 0) {
+    if (pthread_barrier_init(&rendInicio, NULL, n_threads + 1) != 0) {
         SDL_Log("Não foi possível inicializar as barreiras: %s", strerror(errno));
         return 0;
     };
 
-    if (pthread_barrier_init(&rendFim, NULL, args->threads + 1) != 0) {
+    if (pthread_barrier_init(&rendFim, NULL, n_threads + 1) != 0) {
         SDL_Log("Não foi possível inicializar as barreiras: %s", strerror(errno));
         return 0;
     };
     
-    int tamanho_segmento = WINDOW_HEIGHT / args->threads;
-    int resto = WINDOW_HEIGHT % args->threads;
+    int tamanho_segmento = WINDOW_HEIGHT / n_threads;
+    int resto = WINDOW_HEIGHT % n_threads;
     int inicio_segmento = 0;
 
-    for (int i = 0; i < args->threads; i++) {
+    for (int i = 0; i < n_threads; i++) {
         ThreadInfo *t = threads + i;
         
         t->rect = (SDL_Rect) {
@@ -229,10 +291,10 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     Args args = validar_argumentos(argc, argv);
     SDL_srand(args.seed);
 
-    if (!inicializar_circulos(&args))
+    if (!inicializar_circulos(args.size))
         return SDL_APP_FAILURE;
 
-    if (!inicializar_threads(&args))
+    if (!inicializar_threads(args.threads))
         return SDL_APP_FAILURE;
     
     // Inicializar SDL
@@ -242,14 +304,12 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     }
 
     // Criar renderizador da tela
-    if (!SDL_CreateWindowAndRenderer("Simulador", WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer)) {
+    if (!(window = SDL_CreateWindow("Simulador", WINDOW_WIDTH, WINDOW_HEIGHT, 0))) {
         SDL_Log("Não foi possível criar janela/renderizador: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
-    SDL_SetRenderLogicalPresentation(renderer, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_LOGICAL_PRESENTATION_LETTERBOX);
     canvas = SDL_CreateSurface(WINDOW_WIDTH, WINDOW_HEIGHT, SDL_PIXELFORMAT_RGBA8888);
-
     return SDL_APP_CONTINUE;
 }
 
@@ -265,7 +325,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
     
     // Tratar colisões entre círculos círculos
     mover_circulos();
-    
+
     // Desenhar quadro renderizado manualmente na janela
     pthread_barrier_wait(&rendInicio);
     pthread_barrier_wait(&rendFim);
