@@ -19,10 +19,17 @@
 
 //< Constantes de execução do programa
 enum {
+    //< Tempo de execução do programa (s)
+    TEMPO_EXECUCAO = 3,
+    //< Comprimento da janela (px)
     WINDOW_WIDTH = 640,
+    //< Altura da janela (px)
     WINDOW_HEIGHT = 480,
+    //< Raio mínimo dos círculos (px)
     RAIO_MIN = 10,
+    //< Raio máximo dos círculos (px)
     RAIO_MAX = 30,
+    //< Velocidade inicial máxima dos círculos (px)
     VEL_MAX = 5,
 };
 
@@ -286,16 +293,38 @@ int inicializar_threads(size_t n_threads) {
     return 1;
 }
 
+//< Renderizador sequencial - renderiza cada frame sequencialmente
+void renderizador_seq(void) {
+    renderizar(NULL);
+}
+
+//< Renderizador paralelo - aguarda cada uma das threads 
+void renderizador_par(void) {
+    pthread_barrier_wait(&rendInicio);
+    pthread_barrier_wait(&rendFim);
+}
+
+//< Usado para se referir genericamente à `renderizador_seq` ou `renderizador_par`
+typedef void(*renderizador_f)(void);
+
 //< Executa do início do programa,
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
+    renderizador_f* renderizador = (renderizador_f*)appstate;
     Args args = validar_argumentos(argc, argv);
     SDL_srand(args.seed);
 
     if (!inicializar_circulos(args.size))
         return SDL_APP_FAILURE;
 
-    if (!inicializar_threads(args.threads))
-        return SDL_APP_FAILURE;
+    // Inicializar estado do renderizador
+    if (args.mode == PAR) {
+        *renderizador = renderizador_par;
+
+        if (!inicializar_threads(args.threads))
+            return SDL_APP_FAILURE;
+    } else {
+        *renderizador = renderizador_seq;
+    }
     
     // Inicializar SDL
     if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -309,7 +338,11 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
         return SDL_APP_FAILURE;
     }
 
+    // Imprimir parte da saída final do programa
+    printf("%s,%zu,%d,", args.mode == SEQ ? "seq" : "par", args.size, args.threads);
+
     canvas = SDL_CreateSurface(WINDOW_WIDTH, WINDOW_HEIGHT, SDL_PIXELFORMAT_RGBA8888);
+    fpsPerf = SDL_GetPerformanceCounter();
     return SDL_APP_CONTINUE;
 }
 
@@ -320,15 +353,15 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 
 //< Executa a cada tick do programa contínuamente.
 SDL_AppResult SDL_AppIterate(void *appstate) {
+    renderizador_f renderizador = (renderizador_f)appstate;
     Uint64 perf = SDL_GetPerformanceCounter();
-    Uint64 freq = SDL_GetPerformanceFrequency();
+    Uint64 freq = (Uint64)TEMPO_EXECUCAO * SDL_GetPerformanceFrequency();
     
     // Tratar colisões entre círculos círculos
     mover_circulos();
 
     // Desenhar quadro renderizado manualmente na janela
-    pthread_barrier_wait(&rendInicio);
-    pthread_barrier_wait(&rendFim);
+    renderizador();
 
     SDL_BlitSurface(canvas, 0, SDL_GetWindowSurface(window), 0);
     
@@ -337,16 +370,16 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
     
     // Atualizar FPS
     frames++;
+    
+    // Imprimir FPS após o período determinado e finalizar a execução
     if (perf - fpsPerf >= freq) {
         double fps = frames;
         fps /= (double)(perf - fpsPerf) / (double)freq;
 
-        // Imprimir FPS
-        printf("FPS: %.2lf\n", fps);
+        // Imprimir FPS e finalizar a execução
+        printf("%.6f\n", fps);
         fflush(stdout);
-
-        fpsPerf = perf;
-        frames = 0;
+        return SDL_APP_SUCCESS;
     }
 
     return SDL_APP_CONTINUE;

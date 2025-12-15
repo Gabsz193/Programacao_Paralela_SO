@@ -9,8 +9,8 @@ RUN apk add --no-cache python3 py3-matplotlib build-base cmake make sdl3-dev mus
 COPY . .
 
 # Compile the C program
-RUN cmake -S . -B out -G "Unix Makefiles" -DCMAKE_C_COMPILER=gcc
-RUN make -C out
+RUN cmake -S . -B build -G "Unix Makefiles" -DCMAKE_C_COMPILER=gcc
+RUN make -C build
 
 # Default command (can be overridden)
-CMD ["out/simulation", "--size", "10"]
+CMD [ "scripts/init.sh" ]

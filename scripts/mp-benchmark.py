@@ -1,24 +1,17 @@
 import subprocess
-import time
 import os
 import csv
 import matplotlib.pyplot as plt
-import sys
 
 # Configuration
-SIZES = [100000, 1000000, 10000000, 50000000]
+SIZES = [10, 100, 500, 1000]
 THREADS = [1, 2, 4, 8, 16]
 ITERATIONS = 3
-OUTPUT_FILE = "out/benchmark_results.csv"
-EXECUTABLE = "./bin/scalar_product"
+OUTPUT_FILE = "out/mp-benchmark.csv"
+EXECUTABLE = "./build/matrix_product"
 
 def run_benchmark():
     results = []
-    
-    # Ensure executable exists
-    if not os.path.exists(EXECUTABLE):
-        print("Compiling...")
-        subprocess.run(["make"], check=True)
 
     print(f"Running benchmarks with sizes: {SIZES} and threads: {THREADS}")
     
@@ -64,7 +57,7 @@ def save_results(results):
         writer.writeheader()
         writer.writerows(results)
 
-def generate_graphs(results):
+def generate_graphs(results):    
     # Organize data
     seq_times = {r['size']: r['time'] for r in results if r['mode'] == 'seq'}
     
@@ -82,13 +75,13 @@ def generate_graphs(results):
         plt.plot(sizes, speedups, marker='o', label=f'{t} Threads')
     
     plt.xscale('log')
-    plt.xlabel('Vector Size')
-    plt.ylabel('Speedup (T_seq / T_par)')
-    plt.title('Speedup vs Vector Size')
+    plt.xlabel('Tamanho')
+    plt.ylabel('Speedup ($T_{seq} / T_{par}$)')
+    plt.title('Speedup vs Tamanho')
     plt.legend()
     plt.grid(True)
-    plt.savefig('speedup.png')
-    print("Generated speedup.png")
+    plt.savefig('out/mp-speedup.png')
+    print("Generated mp-speedup.png")
 
     # Execution Time Graph
     plt.figure(figsize=(10, 6))
@@ -96,7 +89,7 @@ def generate_graphs(results):
     # Plot Sequential
     sizes = sorted(list(seq_times.keys()))
     times = [seq_times[s] for s in sizes]
-    plt.plot(sizes, times, marker='x', linestyle='--', label='Sequential', color='black')
+    plt.plot(sizes, times, marker='x', linestyle='--', label='Sequencial', color='black')
 
     for t in THREADS:
         times = []
@@ -108,15 +101,15 @@ def generate_graphs(results):
                 current_sizes.append(size)
         plt.plot(current_sizes, times, marker='o', label=f'{t} Threads')
 
-    plt.xscale('log')
     plt.yscale('log')
-    plt.xlabel('Vector Size')
-    plt.ylabel('Execution Time (s)')
-    plt.title('Execution Time vs Vector Size')
+    plt.xlabel('Tamanho')
+    plt.gca().xaxis.set_major_formatter('{x:.0f}x{x:.0f}')
+    plt.ylabel('Tempo de Execução (s)')
+    plt.title('Tempo de Execução vs Tamanho')
     plt.legend()
     plt.grid(True)
-    plt.savefig('execution_time.png')
-    print("Generated execution_time.png")
+    plt.savefig('out/mp-execution_time.png')
+    print("Generated mp-execution_time.png")
 
 def print_table(results):
     print("\nBenchmark Results:")

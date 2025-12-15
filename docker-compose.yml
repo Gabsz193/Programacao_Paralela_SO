@@ -5,3 +5,4 @@ services:
       DISPLAY: "${DISPLAY}"
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./out:/app/out
