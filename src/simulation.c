@@ -20,7 +20,7 @@
 //< Constantes de execução do programa
 enum {
     //< Tempo de execução do programa (s)
-    TEMPO_EXECUCAO = 5,
+    TEMPO_EXECUCAO = 20,
     //< Raio mínimo dos círculos (px)
     RAIO_MIN = 10,
     //< Raio máximo dos círculos (px)
