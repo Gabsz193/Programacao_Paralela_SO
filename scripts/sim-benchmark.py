@@ -75,8 +75,8 @@ def generate_graphs(results):
                 current_sizes.append(size)
         plt.plot(current_sizes, times, marker='o', label=f'{t} Threads')
 
-    plt.xscale('log')
-    plt.yscale('log')
+    ax = plt.gca()
+    ax.set_xticks(SIZES)
     plt.xlabel('Quantidade de Bolinhas')
     plt.ylabel('FPS (quadros/s)')
     plt.title('FPS vs Quantidade de Bolinhas')

@@ -74,7 +74,10 @@ def generate_graphs(results):
                 sizes.append(size)
         plt.plot(sizes, speedups, marker='o', label=f'{t} Threads')
     
-    plt.xscale('log')
+    ax = plt.gca()
+    ax.set_xticks(SIZES)
+    ax.xaxis.set_major_formatter('{x:.0f}x{x:.0f}')
+    
     plt.xlabel('Tamanho')
     plt.ylabel('Speedup ($T_{seq} / T_{par}$)')
     plt.title('Speedup vs Tamanho')
@@ -101,9 +104,12 @@ def generate_graphs(results):
                 current_sizes.append(size)
         plt.plot(current_sizes, times, marker='o', label=f'{t} Threads')
 
+    ax = plt.gca()
+    ax.set_xticks(SIZES)
+    ax.xaxis.set_major_formatter('{x:.0f}x{x:.0f}')
+    
     plt.yscale('log')
     plt.xlabel('Tamanho')
-    plt.gca().xaxis.set_major_formatter('{x:.0f}x{x:.0f}')
     plt.ylabel('Tempo de Execução (s)')
     plt.title('Tempo de Execução vs Tamanho')
     plt.legend()
