@@ -4,7 +4,7 @@ import csv
 import matplotlib.pyplot as plt
 
 # Configuration
-SIZES = [10, 50, 100, 500]
+SIZES = [400, 800, 1200, 2400]
 THREADS = [1, 2, 4, 8]
 OUTPUT_FILE = "out/sim-benchmark.csv"
 EXECUTABLE = "./build/simulation"
@@ -77,9 +77,11 @@ def generate_graphs(results):
 
     ax = plt.gca()
     ax.set_xticks(SIZES)
-    plt.xlabel('Quantidade de Bolinhas')
+    ax.xaxis.set_major_formatter('{x:.0f}x{x:.0f}')
+
+    plt.xlabel('Dimensão')
     plt.ylabel('FPS (quadros/s)')
-    plt.title('FPS vs Quantidade de Bolinhas')
+    plt.title('FPS vs Dimensão')
     plt.legend()
     plt.grid(True)
     plt.savefig('out/sim-execution_time.png')

@@ -20,11 +20,7 @@
 //< Constantes de execução do programa
 enum {
     //< Tempo de execução do programa (s)
-    TEMPO_EXECUCAO = 3,
-    //< Comprimento da janela (px)
-    WINDOW_WIDTH = 640,
-    //< Altura da janela (px)
-    WINDOW_HEIGHT = 480,
+    TEMPO_EXECUCAO = 5,
     //< Raio mínimo dos círculos (px)
     RAIO_MIN = 10,
     //< Raio máximo dos círculos (px)
@@ -51,6 +47,7 @@ typedef struct {
 //< Variáveis utilizadas para gerenciar a janela e renderização.
 static SDL_Window *window = NULL;
 static SDL_Surface *canvas = NULL;
+static Uint64 tamanhoTela = 0;
 
 //< Os círculos gerados pelo programa.
 static Circulo* circulos;
@@ -82,8 +79,8 @@ int inicializar_circulos(size_t qtd) {
         c->r = RAIO_MIN + SDL_randf() * (RAIO_MAX - RAIO_MIN);
         
         // Gerar posição aleatória dentro da tela
-        c->x = c->r + (SDL_randf() * (WINDOW_WIDTH  - (2 * c->r)));
-        c->y = c->r + (SDL_randf() * (WINDOW_HEIGHT - (2 * c->r)));
+        c->x = c->r + (SDL_randf() * (tamanhoTela - (2 * c->r)));
+        c->y = c->r + (SDL_randf() * (tamanhoTela - (2 * c->r)));
 
         // Gerar velocidade entre [-VEL_MAX, VEL_MAX)
         c->vx = (SDL_randf() - 0.5f) * 2 * VEL_MAX;
@@ -198,7 +195,7 @@ void mover_circulos() {
 
 //< Renderiza uma seção da tela.
 void renderizar(const SDL_Rect* rect) {
-    SDL_Rect defaultRect = { .x = 0, .y = 0, .w = WINDOW_WIDTH, .h = WINDOW_HEIGHT };
+    SDL_Rect defaultRect = { .x = 0, .y = 0, .w = tamanhoTela, .h = tamanhoTela };
 
     // Usar um rect padrão para a tela toda.
     if (rect == NULL)
@@ -267,15 +264,15 @@ int inicializar_threads(size_t n_threads) {
         return 0;
     };
     
-    int tamanho_segmento = WINDOW_HEIGHT / n_threads;
-    int resto = WINDOW_HEIGHT % n_threads;
+    int tamanho_segmento = tamanhoTela / n_threads;
+    int resto = tamanhoTela % n_threads;
     int inicio_segmento = 0;
 
     for (int i = 0; i < n_threads; i++) {
         ThreadInfo *t = threads + i;
         
         t->rect = (SDL_Rect) {
-            .w = WINDOW_WIDTH,
+            .w = tamanhoTela,
             .h = tamanho_segmento + (i < resto),
             .x = 0,
             .y = inicio_segmento,
@@ -313,7 +310,12 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     Args args = validar_argumentos(argc, argv);
     SDL_srand(args.seed);
 
-    if (!inicializar_circulos(args.size))
+    // Determinar o tamanho da tela pela linha de comando
+    tamanhoTela = args.size;
+    
+    // Calcular dinamicamente a quantidade de bolinhas a partir das dimensões.
+    size_t qtdCirculos = SDL_sqrt(tamanhoTela);
+    if (!inicializar_circulos(qtdCirculos))
         return SDL_APP_FAILURE;
 
     // Inicializar estado do renderizador
@@ -333,15 +335,14 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     }
 
     // Criar renderizador da tela
-    if (!(window = SDL_CreateWindow("Simulador", WINDOW_WIDTH, WINDOW_HEIGHT, 0))) {
+    if (!(window = SDL_CreateWindow("Simulador", tamanhoTela, tamanhoTela, 0))) {
         SDL_Log("Não foi possível criar janela/renderizador: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
     // Imprimir parte da saída final do programa
     printf("%s,%zu,%d,", args.mode == SEQ ? "seq" : "par", args.size, args.threads);
-
-    canvas = SDL_CreateSurface(WINDOW_WIDTH, WINDOW_HEIGHT, SDL_PIXELFORMAT_RGBA8888);
+    canvas = SDL_CreateSurface(tamanhoTela, tamanhoTela, SDL_PIXELFORMAT_RGBA8888);
     fpsPerf = SDL_GetPerformanceCounter();
     return SDL_APP_CONTINUE;
 }
